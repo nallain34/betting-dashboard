@@ -18,12 +18,12 @@ function getSheets() {
   return { sheets: _sheets, sheetId: _sheetId };
 }
 
-async function readRange(range) {
+async function readRange(range, { formatted = false } = {}) {
   const { sheets, sheetId } = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
     range,
-    valueRenderOption: 'UNFORMATTED_VALUE',
+    valueRenderOption: formatted ? 'FORMATTED_VALUE' : 'UNFORMATTED_VALUE',
   });
   return res.data.values || [];
 }

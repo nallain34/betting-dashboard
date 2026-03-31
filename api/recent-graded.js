@@ -1,5 +1,9 @@
 const { readRange } = require('./_sheets');
 
+function isBlank(val) {
+  return val === undefined || val === null || val === '';
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -11,75 +15,66 @@ module.exports = async function handler(req, res) {
 
     const recent = [];
 
-    // Straights: result in col W (index 22), graded date col X (index 23)
-    // Date in col D (index 3)
-    const straightRows = await readRange("'Straights'!A3:AB");
-    if (straightRows) {
-      straightRows.forEach((r, i) => {
-        const result = r[22];
-        if (result && r[0]) {
-          // Use the date col D (index 3) to approximate recency
-          // Or graded date if available in col X (index 23)
-          let dateVal = r[23] || r[3];
-          if (dateVal) {
-            let d;
-            if (typeof dateVal === 'number') {
-              d = new Date((dateVal - 25569) * 86400000);
-            } else {
-              d = new Date(dateVal);
-            }
-            if (d >= twoDaysAgo) {
-              recent.push({
-                tab: 'Straights',
-                rowIndex: i + 3,
-                date: r[3] ?? '',
-                time: r[4] ?? '',
-                league: r[5] ?? '',
-                bet: r[10] ?? '',
-                book: r[19] ?? '',
-                wager: r[20] ?? '',
-                odds: r[21] ?? '',
-                result: result,
-                allFields: r,
-              });
-            }
-          }
-        }
-      });
+    function parseDate(val) {
+      if (!val && val !== 0) return null;
+      if (typeof val === 'number') {
+        return new Date((val - 25569) * 86400000);
+      }
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
     }
 
-    // Parlays: result in col T (index 19), date in col D (index 3)
+    // Straights: result col W (index 22), graded date col X (index 23), event date col D (index 3)
+    const straightRows = await readRange("'Straights'!A3:AB");
+    for (let i = 0; i < straightRows.length; i++) {
+      const r = straightRows[i];
+      if (!r || !r.length || isBlank(r[0])) continue;
+      const result = r[22];
+      if (isBlank(result)) continue;
+
+      // Check graded date (col X, index 23) first, fall back to event date (col D, index 3)
+      const d = parseDate(r[23]) || parseDate(r[3]);
+      if (d && d >= twoDaysAgo) {
+        recent.push({
+          tab: 'Straights',
+          rowIndex: i + 3,
+          date: r[3] ?? '',
+          time: r[4] ?? '',
+          league: r[5] ?? '',
+          bet: r[10] ?? '',
+          book: r[19] ?? '',
+          wager: r[20] ?? '',
+          odds: r[21] ?? '',
+          result,
+          allFields: r,
+        });
+      }
+    }
+
+    // ParlaysOther: result col T (index 19), graded date col U (index 20), event date col D (index 3)
     const parlayRows = await readRange("'ParlaysOther'!A3:Y");
-    if (parlayRows) {
-      parlayRows.forEach((r, i) => {
-        const result = r[19];
-        if (result && r[0]) {
-          let dateVal = r[20] || r[3]; // graded date or event date
-          if (dateVal) {
-            let d;
-            if (typeof dateVal === 'number') {
-              d = new Date((dateVal - 25569) * 86400000);
-            } else {
-              d = new Date(dateVal);
-            }
-            if (d >= twoDaysAgo) {
-              recent.push({
-                tab: 'ParlaysOther',
-                rowIndex: i + 3,
-                date: r[3] ?? '',
-                league: r[5] ?? '',
-                playType: r[6] ?? '',
-                bet: r[7] ?? '',
-                book: r[16] ?? '',
-                wager: r[17] ?? '',
-                odds: r[18] ?? '',
-                result: result,
-                allFields: r,
-              });
-            }
-          }
-        }
-      });
+    for (let i = 0; i < parlayRows.length; i++) {
+      const r = parlayRows[i];
+      if (!r || !r.length || isBlank(r[0])) continue;
+      const result = r[19];
+      if (isBlank(result)) continue;
+
+      const d = parseDate(r[20]) || parseDate(r[3]);
+      if (d && d >= twoDaysAgo) {
+        recent.push({
+          tab: 'ParlaysOther',
+          rowIndex: i + 3,
+          date: r[3] ?? '',
+          league: r[5] ?? '',
+          playType: r[6] ?? '',
+          bet: r[7] ?? '',
+          book: r[16] ?? '',
+          wager: r[17] ?? '',
+          odds: r[18] ?? '',
+          result,
+          allFields: r,
+        });
+      }
     }
 
     res.status(200).json({ recent });

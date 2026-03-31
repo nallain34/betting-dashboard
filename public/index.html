@@ -301,30 +301,31 @@ function renderResults() {
   if (!resultsData) return;
   const d = resultsData[currentTab];
   if (!d) return;
+  const f = d.fmt || {};
   $('#resultsBody').innerHTML = `
     <div class="results-grid">
       <div class="result-item result-hero">
-        <div class="result-value ${plClass(d.pl)}">${fmt$(d.pl)}</div>
+        <div class="result-value ${plClass(d.pl)}">${f.pl || fmt$(d.pl)}</div>
         <div class="result-label">P/L</div>
       </div>
       <div class="result-item">
-        <div class="result-value">${fmtPct(d.roi)}</div>
+        <div class="result-value">${f.roi || fmtPct(d.roi)}</div>
         <div class="result-label">ROI</div>
       </div>
       <div class="result-item">
-        <div class="result-value">${d.wlv_string || '-'}</div>
+        <div class="result-value">${f.wlv_string || d.wlv_string || '-'}</div>
         <div class="result-label">W-L-V</div>
       </div>
       <div class="result-item">
-        <div class="result-value">${fmtPct(d.win_pct)}</div>
+        <div class="result-value">${f.win_pct || fmtPct(d.win_pct)}</div>
         <div class="result-label">Win %</div>
       </div>
       <div class="result-item">
-        <div class="result-value">${d.settled_bets ?? '-'}</div>
+        <div class="result-value">${f.settled_bets || d.settled_bets || '-'}</div>
         <div class="result-label">Bets Settled</div>
       </div>
       <div class="result-item result-hero" style="padding:0">
-        <div class="result-value">${fmt$(d.settled_wagered)}</div>
+        <div class="result-value">${f.settled_wagered || fmt$(d.settled_wagered)}</div>
         <div class="result-label">Total Wagered</div>
       </div>
     </div>`;
