@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#007AFF">
+<title>Betting Dashboard</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+:root {
+  --bg: #F2F2F7;
+  --bg2: #FFFFFF;
+  --text: #000000;
+  --text2: #3C3C43;
+  --text3: #8E8E93;
+  --sep: rgba(60,60,67,0.12);
+  --blue: #007AFF;
+  --green: #34C759;
+  --red: #FF3B30;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --modal-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+  --radius: 14px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media(prefers-color-scheme:dark){
+  :root {
+    --bg: #000000;
+    --bg2: #1C1C1E;
+    --text: #FFFFFF;
+    --text2: #EBEBF5;
+    --text3: #636366;
+    --sep: rgba(84,84,88,0.36);
+    --card-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    --modal-shadow: 0 -4px 32px rgba(0,0,0,0.5);
+  }
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html { font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; background:var(--bg); color:var(--text); }
+body { padding-top:calc(var(--safe-top) + 12px); padding-bottom:calc(var(--safe-bottom) + 80px); min-height:100dvh; overflow-x:hidden; }
+.container { max-width:500px; margin:0 auto; padding:0 16px; }
+
+/* Header */
+.header { text-align:center; padding:8px 0 16px; }
+.header h1 { font-size:28px; font-weight:700; letter-spacing:-0.5px; }
+
+/* Cards */
+.card { background:var(--bg2); border-radius:var(--radius); box-shadow:var(--card-shadow); margin-bottom:14px; overflow:hidden; }
+.card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; font-weight:600; font-size:17px; min-height:44px; }
+.card-body { padding:0 16px 16px; }
+
+/* Tab bar */
+.tab-bar { display:flex; background:var(--sep); border-radius:10px; padding:2px; margin-bottom:14px; }
+.tab-btn { flex:1; padding:8px 0; text-align:center; font-size:14px; font-weight:600; border:none; background:transparent; color:var(--text3); border-radius:8px; cursor:pointer; min-height:36px; transition:all 0.2s; }
+.tab-btn.active { background:var(--bg2); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+
+/* Results */
+.results-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.result-item { text-align:center; }
+.result-value { font-size:22px; font-weight:700; letter-spacing:-0.5px; }
+.result-value.positive { color:var(--green); }
+.result-value.negative { color:var(--red); }
+.result-label { font-size:12px; color:var(--text3); margin-top:2px; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
+.result-hero { grid-column:1/-1; padding:4px 0 8px; }
+.result-hero .result-value { font-size:34px; }
+
+/* Bet rows */
+.bet-row { display:flex; align-items:center; padding:13px 16px; border-top:0.5px solid var(--sep); cursor:pointer; min-height:56px; gap:12px; transition:background 0.15s; }
+.bet-row:first-child { border-top:none; }
+.bet-row:active { background:var(--sep); }
+.bet-info { flex:1; min-width:0; }
+.bet-primary { font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bet-secondary { font-size:13px; color:var(--text3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bet-right { text-align:right; flex-shrink:0; }
+.bet-odds { font-size:15px; font-weight:600; }
+.bet-wager { font-size:13px; color:var(--text3); margin-top:2px; }
+.bet-result-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.badge-won { background:rgba(52,199,89,0.15); color:var(--green); }
+.badge-lost { background:rgba(255,59,48,0.15); color:var(--red); }
+.badge-push, .badge-void { background:var(--sep); color:var(--text3); }
+
+/* Section header */
+.section-title { font-size:13px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; padding:20px 4px 8px; }
+
+/* Collapsible */
+.collapse-toggle { width:100%; cursor:pointer; user-select:none; }
+.collapse-toggle .chevron { transition:transform 0.3s; font-size:14px; color:var(--text3); }
+.collapse-toggle.open .chevron { transform:rotate(90deg); }
+.collapse-body { display:none; }
+.collapse-body.open { display:block; }
+
+/* Futures summary */
+.futures-summary { display:flex; gap:16px; padding:8px 16px 4px; }
+.futures-summary .fs-item { font-size:14px; color:var(--text2); }
+.futures-summary .fs-value { font-weight:700; }
+
+/* Modal overlay */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:100; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+.modal-overlay.open { opacity:1; pointer-events:auto; }
+@media(prefers-color-scheme:dark){ .modal-overlay { background:rgba(0,0,0,0.6); } }
+
+/* Bottom sheet modal */
+.modal-sheet { position:fixed; left:0; right:0; bottom:0; z-index:101; background:var(--bg2); border-radius:16px 16px 0 0; box-shadow:var(--modal-shadow); transform:translateY(100%); transition:transform 0.4s cubic-bezier(0.32,0.72,0,1); max-height:90dvh; display:flex; flex-direction:column; padding-bottom:var(--safe-bottom); }
+.modal-sheet.open { transform:translateY(0); }
+.modal-handle { width:36px; height:5px; border-radius:3px; background:var(--text3); opacity:0.4; margin:8px auto 4px; flex-shrink:0; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px 12px; flex-shrink:0; }
+.modal-title { font-size:17px; font-weight:700; }
+.modal-close { background:var(--sep); border:none; width:30px; height:30px; border-radius:50%; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text3); }
+.modal-scroll { overflow-y:auto; padding:0 16px 20px; flex:1; -webkit-overflow-scrolling:touch; }
+
+/* Modal fields */
+.field-group { margin-bottom:14px; }
+.field-label { font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.field-value { font-size:16px; font-weight:500; padding:10px 0; border-bottom:0.5px solid var(--sep); min-height:40px; }
+.field-input { width:100%; font-size:16px; font-weight:500; padding:10px 12px; border:1.5px solid var(--sep); border-radius:10px; background:var(--bg); color:var(--text); font-family:inherit; min-height:44px; }
+.field-input:focus { outline:none; border-color:var(--blue); }
+select.field-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E8E93' stroke-width='2' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
+
+/* Buttons */
+.btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:17px; font-weight:600; cursor:pointer; min-height:50px; transition:opacity 0.15s; font-family:inherit; }
+.btn:active { opacity:0.7; }
+.btn-primary { background:var(--blue); color:#fff; }
+.btn-edit { background:var(--sep); color:var(--text); margin-bottom:10px; }
+.btn-row { display:flex; gap:10px; margin-top:16px; }
+.btn-row .btn { flex:1; }
+
+/* Recently Graded floating pill */
+.floating-pill { position:fixed; bottom:calc(var(--safe-bottom) + 24px); left:50%; transform:translateX(-50%); background:var(--blue); color:#fff; border:none; padding:12px 24px; border-radius:50px; font-size:15px; font-weight:600; cursor:pointer; z-index:50; box-shadow:0 4px 16px rgba(0,122,255,0.35); font-family:inherit; white-space:nowrap; min-height:44px; transition:transform 0.2s, opacity 0.15s; }
+.floating-pill:active { transform:translateX(-50%) scale(0.95); opacity:0.8; }
+
+/* Full screen overlay */
+.fullscreen-overlay { position:fixed; inset:0; z-index:200; background:var(--bg); transform:translateY(100%); transition:transform 0.4s cubic-bezier(0.32,0.72,0,1); overflow-y:auto; -webkit-overflow-scrolling:touch; padding:var(--safe-top) 0 var(--safe-bottom); }
+.fullscreen-overlay.open { transform:translateY(0); }
+.fullscreen-header { position:sticky; top:0; background:var(--bg); display:flex; align-items:center; justify-content:space-between; padding:16px; z-index:1; border-bottom:0.5px solid var(--sep); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
+.fullscreen-title { font-size:20px; font-weight:700; }
+.fullscreen-close { background:var(--sep); border:none; width:32px; height:32px; border-radius:50%; font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text3); min-width:44px; min-height:44px; }
+.fullscreen-body { padding:0 16px 40px; }
+
+/* Loading */
+.loading { text-align:center; padding:40px 0; color:var(--text3); font-size:15px; }
+.spinner { width:24px; height:24px; border:3px solid var(--sep); border-top-color:var(--blue); border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Empty state */
+.empty { text-align:center; padding:32px 16px; color:var(--text3); font-size:15px; }
+
+/* Toast */
+.toast { position:fixed; top:calc(var(--safe-top) + 16px); left:50%; transform:translateX(-50%) translateY(-80px); background:var(--bg2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:15px; font-weight:600; box-shadow:0 4px 20px rgba(0,0,0,0.15); z-index:300; transition:transform 0.4s cubic-bezier(0.32,0.72,0,1); white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* Count badge */
+.count-badge { background:var(--text3); color:var(--bg2); font-size:12px; font-weight:700; padding:2px 8px; border-radius:20px; margin-left:8px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Dashboard</h1>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="card">
+    <div class="tab-bar" id="resultsTabs">
+      <button class="tab-btn active" data-tab="l7">L7</button>
+      <button class="tab-btn" data-tab="l30">L30</button>
+      <button class="tab-btn" data-tab="allTime">All Time</button>
+    </div>
+    <div class="card-body" id="resultsBody">
+      <div class="loading"><div class="spinner"></div>Loading results...</div>
+    </div>
+  </div>
+
+  <!-- OPEN BETS: STRAIGHTS -->
+  <div class="section-title">Open Bets</div>
+  <div class="card">
+    <div class="card-header">Straights <span class="count-badge" id="straightsCount">-</span></div>
+    <div id="straightsList"></div>
+  </div>
+
+  <!-- OPEN BETS: PARLAYS -->
+  <div class="card">
+    <div class="card-header">Parlays <span class="count-badge" id="parlaysCount">-</span></div>
+    <div id="parlaysList"></div>
+  </div>
+
+  <!-- FUTURES -->
+  <div class="section-title">Futures</div>
+  <div class="card">
+    <div class="card-header collapse-toggle" id="futuresToggle">
+      <span>Futures <span class="count-badge" id="futuresCount">-</span></span>
+      <span class="chevron">&#9654;</span>
+    </div>
+    <div class="futures-summary" id="futuresSummary" style="display:none"></div>
+    <div class="collapse-body" id="futuresBody">
+      <div id="futuresList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Recently Graded Pill -->
+<button class="floating-pill" id="recentPill">Recently Graded</button>
+
+<!-- Recently Graded Overlay -->
+<div class="fullscreen-overlay" id="recentOverlay">
+  <div class="fullscreen-header">
+    <span class="fullscreen-title">Recently Graded</span>
+    <button class="fullscreen-close" id="recentClose">&times;</button>
+  </div>
+  <div class="fullscreen-body" id="recentBody">
+    <div class="loading"><div class="spinner"></div>Loading...</div>
+  </div>
+</div>
+
+<!-- Bet Detail Modal -->
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal-sheet" id="modalSheet">
+  <div class="modal-handle"></div>
+  <div class="modal-header">
+    <span class="modal-title" id="modalTitle">Bet Details</span>
+    <button class="modal-close" id="modalClose">&times;</button>
+  </div>
+  <div class="modal-scroll" id="modalContent"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let resultsData = null;
+let openBetsData = null;
+let futuresData = null;
+let recentData = null;
+let currentTab = 'l7';
+let editMode = false;
+
+// ── Helpers ──
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+function fmt$(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return v || '-';
+  const abs = Math.abs(n).toFixed(2);
+  return n >= 0 ? `+$${abs}` : `-$${abs}`;
+}
+function fmtPct(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return v || '-';
+  // If value is already a decimal like 0.15 (meaning 15%), multiply by 100
+  const pct = Math.abs(n) < 1 && Math.abs(n) > 0 ? (n * 100).toFixed(1) : n.toFixed(1);
+  return pct + '%';
+}
+function plClass(v) { return parseFloat(v) >= 0 ? 'positive' : 'negative'; }
+function fmtOdds(v) { const n = parseFloat(v); return (isNaN(n) || !v) ? (v||'-') : (n > 0 ? '+'+n : ''+n); }
+function fmtDate(v) {
+  if (!v) return '-';
+  if (typeof v === 'number') {
+    const d = new Date((v - 25569) * 86400000);
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
+  return v;
+}
+function resultBadge(r) {
+  if (!r) return '';
+  const low = String(r).toLowerCase();
+  let cls = '';
+  if (low === 'won' || low === 'win' || low === 'w') cls = 'badge-won';
+  else if (low === 'lost' || low === 'loss' || low === 'l') cls = 'badge-lost';
+  else if (low === 'push' || low === 'p') cls = 'badge-push';
+  else if (low === 'void' || low === 'v') cls = 'badge-void';
+  return `<span class="bet-result-badge ${cls}">${r}</span>`;
+}
+
+function showToast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ── Results ──
+async function loadResults() {
+  try {
+    resultsData = await api('/api/results');
+    renderResults();
+  } catch(e) { $('#resultsBody').innerHTML = `<div class="empty">Failed to load results</div>`; }
+}
+
+function renderResults() {
+  if (!resultsData) return;
+  const d = resultsData[currentTab];
+  if (!d) return;
+  $('#resultsBody').innerHTML = `
+    <div class="results-grid">
+      <div class="result-item result-hero">
+        <div class="result-value ${plClass(d.pl)}">${fmt$(d.pl)}</div>
+        <div class="result-label">P/L</div>
+      </div>
+      <div class="result-item">
+        <div class="result-value">${fmtPct(d.roi)}</div>
+        <div class="result-label">ROI</div>
+      </div>
+      <div class="result-item">
+        <div class="result-value">${d.wlv_string || '-'}</div>
+        <div class="result-label">W-L-V</div>
+      </div>
+      <div class="result-item">
+        <div class="result-value">${fmtPct(d.win_pct)}</div>
+        <div class="result-label">Win %</div>
+      </div>
+      <div class="result-item">
+        <div class="result-value">${d.settled_bets ?? '-'}</div>
+        <div class="result-label">Bets Settled</div>
+      </div>
+      <div class="result-item result-hero" style="padding:0">
+        <div class="result-value">${fmt$(d.settled_wagered)}</div>
+        <div class="result-label">Total Wagered</div>
+      </div>
+    </div>`;
+}
+
+$('#resultsTabs').addEventListener('click', e => {
+  if (!e.target.classList.contains('tab-btn')) return;
+  $$('.tab-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentTab = e.target.dataset.tab;
+  renderResults();
+});
+
+// ── Open Bets ──
+async function loadOpenBets() {
+  try {
+    openBetsData = await api('/api/open-bets');
+    renderOpenBets();
+  } catch(e) {
+    $('#straightsList').innerHTML = '<div class="empty">Failed to load</div>';
+    $('#parlaysList').innerHTML = '<div class="empty">Failed to load</div>';
+  }
+}
+
+function renderOpenBets() {
+  const { straights, parlays } = openBetsData;
+  $('#straightsCount').textContent = straights.length;
+  $('#parlaysCount').textContent = parlays.length;
+
+  if (!straights.length) {
+    $('#straightsList').innerHTML = '<div class="empty">No open straights</div>';
+  } else {
+    $('#straightsList').innerHTML = straights.map((b, i) => `
+      <div class="bet-row" data-type="straight" data-idx="${i}">
+        <div class="bet-info">
+          <div class="bet-primary">${b.bet || '-'}</div>
+          <div class="bet-secondary">${b.league || ''} &middot; ${fmtDate(b.date)} ${b.time || ''}</div>
+        </div>
+        <div class="bet-right">
+          <div class="bet-odds">${fmtOdds(b.odds)}</div>
+          <div class="bet-wager">$${b.wager || '-'}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  if (!parlays.length) {
+    $('#parlaysList').innerHTML = '<div class="empty">No open parlays</div>';
+  } else {
+    $('#parlaysList').innerHTML = parlays.map((b, i) => `
+      <div class="bet-row" data-type="parlay" data-idx="${i}">
+        <div class="bet-info">
+          <div class="bet-primary">${b.bet || '-'}</div>
+          <div class="bet-secondary">${b.league || ''} &middot; ${b.playType || ''} &middot; ${fmtDate(b.date)}</div>
+        </div>
+        <div class="bet-right">
+          <div class="bet-odds">${fmtOdds(b.odds)}</div>
+          <div class="bet-wager">$${b.wager || '-'}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ── Bet row click handlers ──
+document.addEventListener('click', e => {
+  const row = e.target.closest('.bet-row');
+  if (!row) return;
+  const type = row.dataset.type;
+  const idx = parseInt(row.dataset.idx);
+
+  if (type === 'straight') openBetModal(openBetsData.straights[idx], 'Straights');
+  else if (type === 'parlay') openBetModal(openBetsData.parlays[idx], 'ParlaysOther');
+  else if (type === 'future') openFuturesModal(futuresData.open[idx]);
+  else if (type === 'recent') openRecentModal(recentData.recent[idx]);
+});
+
+// ── Futures ──
+async function loadFutures() {
+  try {
+    futuresData = await api('/api/futures');
+    renderFutures();
+  } catch(e) { $('#futuresList').innerHTML = '<div class="empty">Failed to load</div>'; }
+}
+
+function renderFutures() {
+  const { open, summary } = futuresData;
+  $('#futuresCount').textContent = open.length;
+
+  const sumEl = $('#futuresSummary');
+  sumEl.style.display = 'flex';
+  sumEl.innerHTML = `
+    <div class="fs-item">6M P/L: <span class="fs-value ${plClass(summary.pl)}" style="color:var(--${parseFloat(summary.pl)>=0?'green':'red'})">${fmt$(summary.pl)}</span></div>
+    <div class="fs-item">Record: <span class="fs-value">${summary.record}</span></div>`;
+
+  if (!open.length) {
+    $('#futuresList').innerHTML = '<div class="empty">No open futures</div>';
+  } else {
+    $('#futuresList').innerHTML = open.map((b, i) => `
+      <div class="bet-row" data-type="future" data-idx="${i}">
+        <div class="bet-info">
+          <div class="bet-primary">${b.bet || '-'}</div>
+          <div class="bet-secondary">${b.league || ''} &middot; Settle: ${fmtDate(b.settleDate)}</div>
+        </div>
+        <div class="bet-right">
+          <div class="bet-odds">${fmtOdds(b.odds)}</div>
+          <div class="bet-wager">$${b.wager || '-'}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+$('#futuresToggle').addEventListener('click', () => {
+  const tog = $('#futuresToggle');
+  const body = $('#futuresBody');
+  tog.classList.toggle('open');
+  body.classList.toggle('open');
+});
+
+// ── Modal ──
+function openModal() {
+  $('#modalOverlay').classList.add('open');
+  $('#modalSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  $('#modalOverlay').classList.remove('open');
+  $('#modalSheet').classList.remove('open');
+  document.body.style.overflow = '';
+  editMode = false;
+}
+$('#modalClose').addEventListener('click', closeModal);
+$('#modalOverlay').addEventListener('click', closeModal);
+
+// Straights column labels (A-AB = 0-27)
+const straightCols = ['ID','Ticket','Sport','Date','Time','League','Game','Period','Type','Side','Bet','Alt Line','Team','Line','Over/Under','Fill','Prop Player','Prop Line','Prop Type','Book','Wager','Odds','Result','Graded Date','Profit','Net','Return','Notes'];
+// Parlays column labels (A-Y = 0-24)
+const parlayCols = ['ID','Ticket','Sport','Date','Parlay ID','League','Play Type','Bet','Legs','Period','Type','Side','Alt Line','Team','Line','Over/Under','Book','Wager','Odds','Result','Graded Date','Profit','Net','Return','Notes'];
+// Futures column labels (A-W = 0-22)
+const futuresCols = ['ID','Ticket','Sport','Settle Date','League','Bet','Type','Side','Line','Over/Under','Fill','Prop Player','Prop Line','Prop Type','Book','Wager','Odds','Result','Graded Date','Profit','Net','Return','Notes'];
+
+function openBetModal(bet, tabName) {
+  editMode = false;
+  const cols = tabName === 'Straights' ? straightCols : parlayCols;
+  const fields = bet.allFields || [];
+  let html = '';
+
+  // Display mode fields
+  html += `<div id="modalFields">`;
+  cols.forEach((label, i) => {
+    if (i >= fields.length && !fields[i]) return;
+    const val = fields[i] ?? '';
+    if (label === 'Result') return; // show separately
+    html += `<div class="field-group"><div class="field-label">${label}</div><div class="field-value" data-col="${i}">${label === 'Date' || label === 'Settle Date' ? fmtDate(val) : val || '-'}</div></div>`;
+  });
+  html += `</div>`;
+
+  // Result dropdown + grade
+  html += `
+    <div class="field-group">
+      <div class="field-label">Result</div>
+      <select class="field-input" id="gradeSelect">
+        <option value="">Select result...</option>
+        <option value="Won">Won</option>
+        <option value="Lost">Lost</option>
+        <option value="Push">Push</option>
+        <option value="Void">Void</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-edit" id="modalEditBtn">Edit</button>
+      <button class="btn btn-primary" id="modalGradeBtn">Grade</button>
+    </div>`;
+
+  $('#modalTitle').textContent = tabName === 'Straights' ? 'Straight Bet' : 'Parlay Bet';
+  $('#modalContent').innerHTML = html;
+
+  // Edit handler
+  $('#modalEditBtn').addEventListener('click', () => {
+    editMode = true;
+    const fieldsDiv = $('#modalFields');
+    cols.forEach((label, i) => {
+      const el = fieldsDiv.querySelector(`[data-col="${i}"]`);
+      if (!el) return;
+      const val = fields[i] ?? '';
+      el.outerHTML = `<input class="field-input" data-col="${i}" value="${String(val).replace(/"/g,'&quot;')}">`;
+    });
+    $('#modalEditBtn').textContent = 'Save';
+    $('#modalEditBtn').onclick = async () => {
+      // Save edits via writing each changed cell
+      showToast('Saving...');
+      try {
+        const inputs = $('#modalFields').querySelectorAll('input[data-col]');
+        for (const inp of inputs) {
+          const col = parseInt(inp.dataset.col);
+          const colLetter = String.fromCharCode(65 + (col < 26 ? col : -1));
+          // For cols >= 26, handle AA, AB
+          let cLetter;
+          if (col < 26) cLetter = String.fromCharCode(65 + col);
+          else cLetter = 'A' + String.fromCharCode(65 + col - 26);
+
+          if (inp.value !== String(fields[col] ?? '')) {
+            await api('/api/grade', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tab: tabName, rowIndex: bet.rowIndex, result: inp.value, _col: cLetter })
+            });
+          }
+        }
+        showToast('Saved!');
+        closeModal();
+        loadOpenBets();
+      } catch(e) { showToast('Error saving'); }
+    };
+  });
+
+  // Grade handler
+  $('#modalGradeBtn').addEventListener('click', async () => {
+    const result = $('#gradeSelect').value;
+    if (!result) { showToast('Select a result'); return; }
+    $('#modalGradeBtn').textContent = 'Grading...';
+    try {
+      await api('/api/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab: tabName, rowIndex: bet.rowIndex, result })
+      });
+      showToast('Graded!');
+      closeModal();
+      loadOpenBets();
+    } catch(e) { showToast('Error grading'); $('#modalGradeBtn').textContent = 'Grade'; }
+  });
+
+  openModal();
+}
+
+function openFuturesModal(bet) {
+  editMode = false;
+  const cols = futuresCols;
+  const fields = bet.allFields || [];
+  let html = `<div id="modalFields">`;
+  cols.forEach((label, i) => {
+    if (i >= fields.length && !fields[i]) return;
+    const val = fields[i] ?? '';
+    if (label === 'Result') return;
+    html += `<div class="field-group"><div class="field-label">${label}</div><div class="field-value">${label === 'Settle Date' ? fmtDate(val) : val || '-'}</div></div>`;
+  });
+  html += `</div>`;
+
+  html += `
+    <div class="field-group">
+      <div class="field-label">Settle Date</div>
+      <input class="field-input" id="settleDateInput" placeholder="MM/DD/YYYY" value="">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Result</div>
+      <select class="field-input" id="gradeSelect">
+        <option value="">Select result...</option>
+        <option value="Won">Won</option>
+        <option value="Lost">Lost</option>
+        <option value="Push">Push</option>
+        <option value="Void">Void</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="modalGradeBtn" style="margin-top:16px">Grade</button>`;
+
+  $('#modalTitle').textContent = 'Future Bet';
+  $('#modalContent').innerHTML = html;
+
+  $('#modalGradeBtn').addEventListener('click', async () => {
+    const result = $('#gradeSelect').value;
+    if (!result) { showToast('Select a result'); return; }
+    $('#modalGradeBtn').textContent = 'Grading...';
+    try {
+      await api('/api/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tab: 'Futures',
+          rowIndex: bet.rowIndex,
+          result,
+          settleDate: $('#settleDateInput').value || undefined
+        })
+      });
+      showToast('Graded!');
+      closeModal();
+      loadFutures();
+    } catch(e) { showToast('Error grading'); $('#modalGradeBtn').textContent = 'Grade'; }
+  });
+
+  openModal();
+}
+
+// ── Recently Graded ──
+$('#recentPill').addEventListener('click', () => {
+  $('#recentOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadRecent();
+});
+$('#recentClose').addEventListener('click', () => {
+  $('#recentOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+});
+
+async function loadRecent() {
+  $('#recentBody').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+  try {
+    recentData = await api('/api/recent-graded');
+    renderRecent();
+  } catch(e) { $('#recentBody').innerHTML = '<div class="empty">Failed to load</div>'; }
+}
+
+function renderRecent() {
+  const { recent } = recentData;
+  if (!recent.length) {
+    $('#recentBody').innerHTML = '<div class="empty">No recently graded bets</div>';
+    return;
+  }
+  $('#recentBody').innerHTML = recent.map((b, i) => `
+    <div class="card" style="margin-top:12px">
+      <div class="bet-row" data-type="recent" data-idx="${i}">
+        <div class="bet-info">
+          <div class="bet-primary">${b.bet || '-'}</div>
+          <div class="bet-secondary">${b.league || ''} &middot; ${fmtDate(b.date)} ${b.tab === 'Straights' ? '&middot; Straight' : '&middot; Parlay'}</div>
+        </div>
+        <div class="bet-right">
+          ${resultBadge(b.result)}
+          <div class="bet-wager" style="margin-top:4px">$${b.wager || '-'}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openRecentModal(bet) {
+  const tabName = bet.tab;
+  const cols = tabName === 'Straights' ? straightCols : parlayCols;
+  const fields = bet.allFields || [];
+  let html = `<div id="modalFields">`;
+  cols.forEach((label, i) => {
+    const val = fields[i] ?? '';
+    if (label === 'Result') return;
+    if (!val && val !== 0) return;
+    html += `<div class="field-group"><div class="field-label">${label}</div><div class="field-value">${label === 'Date' ? fmtDate(val) : val || '-'}</div></div>`;
+  });
+  html += `</div>`;
+
+  html += `
+    <div class="field-group">
+      <div class="field-label">Result</div>
+      <select class="field-input" id="gradeSelect">
+        <option value="Won" ${bet.result==='Won'?'selected':''}>Won</option>
+        <option value="Lost" ${bet.result==='Lost'?'selected':''}>Lost</option>
+        <option value="Push" ${bet.result==='Push'?'selected':''}>Push</option>
+        <option value="Void" ${bet.result==='Void'?'selected':''}>Void</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="modalGradeBtn" style="margin-top:16px">Update Result</button>`;
+
+  $('#modalTitle').textContent = 'Update Graded Bet';
+  $('#modalContent').innerHTML = html;
+
+  $('#modalGradeBtn').addEventListener('click', async () => {
+    const result = $('#gradeSelect').value;
+    $('#modalGradeBtn').textContent = 'Updating...';
+    try {
+      await api('/api/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab: tabName, rowIndex: bet.rowIndex, result })
+      });
+      showToast('Updated!');
+      closeModal();
+      loadRecent();
+    } catch(e) { showToast('Error updating'); $('#modalGradeBtn').textContent = 'Update Result'; }
+  });
+
+  openModal();
+}
+
+// ── Init ──
+loadResults();
+loadOpenBets();
+loadFutures();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+</script>
+</body>
+</html>
