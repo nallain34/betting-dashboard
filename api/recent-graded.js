@@ -1,7 +1,23 @@
 const { readRange } = require('./_sheets');
 
-function isBlank(val) {
+function isOpen(row, resultIndex) {
+  if (!row || row.length <= resultIndex) return true;
+  const val = row[resultIndex];
   return val === undefined || val === null || val === '';
+}
+
+function hasData(row) {
+  if (!row || !row.length) return false;
+  return row.some(cell => cell !== undefined && cell !== null && cell !== '');
+}
+
+function parseDate(val) {
+  if (!val && val !== 0) return null;
+  if (typeof val === 'number') {
+    return new Date((val - 25569) * 86400000);
+  }
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 module.exports = async function handler(req, res) {
@@ -15,24 +31,14 @@ module.exports = async function handler(req, res) {
 
     const recent = [];
 
-    function parseDate(val) {
-      if (!val && val !== 0) return null;
-      if (typeof val === 'number') {
-        return new Date((val - 25569) * 86400000);
-      }
-      const d = new Date(val);
-      return isNaN(d.getTime()) ? null : d;
-    }
-
     // Straights: result col W (index 22), graded date col X (index 23), event date col D (index 3)
+    // 2 header rows, data starts at sheet row 3
     const straightRows = await readRange("'Straights'!A3:AB");
     for (let i = 0; i < straightRows.length; i++) {
       const r = straightRows[i];
-      if (!r || !r.length || isBlank(r[0])) continue;
-      const result = r[22];
-      if (isBlank(result)) continue;
+      if (!hasData(r)) continue;
+      if (isOpen(r, 22)) continue; // skip ungraded
 
-      // Check graded date (col X, index 23) first, fall back to event date (col D, index 3)
       const d = parseDate(r[23]) || parseDate(r[3]);
       if (d && d >= twoDaysAgo) {
         recent.push({
@@ -45,19 +51,19 @@ module.exports = async function handler(req, res) {
           book: r[19] ?? '',
           wager: r[20] ?? '',
           odds: r[21] ?? '',
-          result,
+          result: r[22],
           allFields: r,
         });
       }
     }
 
     // Parlays/Other: result col T (index 19), graded date col U (index 20), event date col D (index 3)
+    // 2 header rows, data starts at sheet row 3
     const parlayRows = await readRange("'Parlays/Other'!A3:Y");
     for (let i = 0; i < parlayRows.length; i++) {
       const r = parlayRows[i];
-      if (!r || !r.length || isBlank(r[0])) continue;
-      const result = r[19];
-      if (isBlank(result)) continue;
+      if (!hasData(r)) continue;
+      if (isOpen(r, 19)) continue; // skip ungraded
 
       const d = parseDate(r[20]) || parseDate(r[3]);
       if (d && d >= twoDaysAgo) {
@@ -71,7 +77,7 @@ module.exports = async function handler(req, res) {
           book: r[16] ?? '',
           wager: r[17] ?? '',
           odds: r[18] ?? '',
-          result,
+          result: r[19],
           allFields: r,
         });
       }

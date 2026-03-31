@@ -1,21 +1,30 @@
 const { readRange } = require('./_sheets');
 
-function isBlank(val) {
+// A row is "open" if the result column is missing, undefined, null, or empty string
+function isOpen(row, resultIndex) {
+  if (!row || row.length <= resultIndex) return true;
+  const val = row[resultIndex];
   return val === undefined || val === null || val === '';
+}
+
+// Check if a row has any meaningful data
+function hasData(row) {
+  if (!row || !row.length) return false;
+  return row.some(cell => cell !== undefined && cell !== null && cell !== '');
 }
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // Straights: cols A-AB (28 cols), result in col W (index 22, 0-based), data starts row 3
+    // Straights: cols A-AB (28 cols), result in col W (index 22, 0-based)
+    // 2 header rows, data starts at sheet row 3
     const straightRows = await readRange("'Straights'!A3:AB");
     const straights = [];
     for (let i = 0; i < straightRows.length; i++) {
       const r = straightRows[i];
-      if (!r || !r.length || isBlank(r[0])) continue;
-      // Result is col W = index 22; if blank, bet is open
-      if (isBlank(r[22])) {
+      if (!hasData(r)) continue;
+      if (isOpen(r, 22)) {
         straights.push({
           tab: 'Straights',
           rowIndex: i + 3,
@@ -31,13 +40,14 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Parlays/Other: cols A-Y (25 cols), result in col T (index 19, 0-based), data starts row 3
+    // Parlays/Other: cols A-Y (25 cols), result in col T (index 19, 0-based)
+    // 2 header rows, data starts at sheet row 3
     const parlayRows = await readRange("'Parlays/Other'!A3:Y");
     const parlays = [];
     for (let i = 0; i < parlayRows.length; i++) {
       const r = parlayRows[i];
-      if (!r || !r.length || isBlank(r[0])) continue;
-      if (isBlank(r[19])) {
+      if (!hasData(r)) continue;
+      if (isOpen(r, 19)) {
         parlays.push({
           tab: 'Parlays/Other',
           rowIndex: i + 3,
