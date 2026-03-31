@@ -31,15 +31,15 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // ParlaysOther: cols A-Y (25 cols), result in col T (index 19, 0-based), data starts row 3
-    const parlayRows = await readRange("'ParlaysOther'!A3:Y");
+    // Parlays/Other: cols A-Y (25 cols), result in col T (index 19, 0-based), data starts row 3
+    const parlayRows = await readRange("'Parlays/Other'!A3:Y");
     const parlays = [];
     for (let i = 0; i < parlayRows.length; i++) {
       const r = parlayRows[i];
       if (!r || !r.length || isBlank(r[0])) continue;
       if (isBlank(r[19])) {
         parlays.push({
-          tab: 'ParlaysOther',
+          tab: 'Parlays/Other',
           rowIndex: i + 3,
           date: r[3] ?? '',
           league: r[5] ?? '',

@@ -10,6 +10,14 @@ module.exports = async function handler(req, res) {
     const raw = await readRange("'Daily Results_L30'!A1:L3");
     const fmt = await readRange("'Daily Results_L30'!A1:L3", { formatted: true });
 
+    // Debug: log raw rows from sheet
+    console.log('DEBUG results raw row 1 (L7):', JSON.stringify(raw[0]));
+    console.log('DEBUG results raw row 2 (L30):', JSON.stringify(raw[1]));
+    console.log('DEBUG results raw row 3 (AllTime):', JSON.stringify(raw[2]));
+    console.log('DEBUG results fmt row 1 (L7):', JSON.stringify(fmt[0]));
+    console.log('DEBUG results fmt row 2 (L30):', JSON.stringify(fmt[1]));
+    console.log('DEBUG results fmt row 3 (AllTime):', JSON.stringify(fmt[2]));
+
     const labels = ['l7', 'l30', 'allTime'];
     const result = {};
 

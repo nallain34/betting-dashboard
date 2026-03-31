@@ -51,8 +51,8 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // ParlaysOther: result col T (index 19), graded date col U (index 20), event date col D (index 3)
-    const parlayRows = await readRange("'ParlaysOther'!A3:Y");
+    // Parlays/Other: result col T (index 19), graded date col U (index 20), event date col D (index 3)
+    const parlayRows = await readRange("'Parlays/Other'!A3:Y");
     for (let i = 0; i < parlayRows.length; i++) {
       const r = parlayRows[i];
       if (!r || !r.length || isBlank(r[0])) continue;
@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
       const d = parseDate(r[20]) || parseDate(r[3]);
       if (d && d >= twoDaysAgo) {
         recent.push({
-          tab: 'ParlaysOther',
+          tab: 'Parlays/Other',
           rowIndex: i + 3,
           date: r[3] ?? '',
           league: r[5] ?? '',

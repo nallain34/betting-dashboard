@@ -14,7 +14,7 @@ module.exports = async function handler(req, res) {
     let resultCol;
     if (tab === 'Straights') {
       resultCol = 'W'; // col 23 (1-indexed)
-    } else if (tab === 'ParlaysOther') {
+    } else if (tab === 'Parlays/Other') {
       resultCol = 'T'; // col 20 (1-indexed)
     } else if (tab === 'Futures') {
       resultCol = 'R'; // col 18 (1-indexed)

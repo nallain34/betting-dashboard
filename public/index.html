@@ -396,7 +396,7 @@ document.addEventListener('click', e => {
   const idx = parseInt(row.dataset.idx);
 
   if (type === 'straight') openBetModal(openBetsData.straights[idx], 'Straights');
-  else if (type === 'parlay') openBetModal(openBetsData.parlays[idx], 'ParlaysOther');
+  else if (type === 'parlay') openBetModal(openBetsData.parlays[idx], 'Parlays/Other');
   else if (type === 'future') openFuturesModal(futuresData.open[idx]);
   else if (type === 'recent') openRecentModal(recentData.recent[idx]);
 });
