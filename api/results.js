@@ -4,54 +4,46 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // Daily Results_L30: row 1=L7, row 2=L30, row 3=All Time
-    // Cols: A=label, B=outstanding_bets, C=outstanding_wagered, D=settled_bets,
-    //   E=settled_wagered, F=pl, G=roi, H=wlv_string, I=win_pct, J=won, K=lost, L=void
-    const raw = await readRange("'Daily Results_L30'!A1:L3");
-    const fmt = await readRange("'Daily Results_L30'!A1:L3", { formatted: true });
+    // Read daily data rows starting at row 5 (skip summary rows 1-3 and header row 4)
+    // Cols (0-indexed): A=date, B=outstanding_bets, C=outstanding_wagered,
+    //   D=settled_bets, E=settled_wagered, F=pl, G=roi, H=wlv_string,
+    //   I=win_pct, J=won, K=lost, L=void
+    const rows = await readRange("'Daily Results_L30'!A5:L");
 
-    // Debug: log raw rows from sheet
-    console.log('DEBUG results raw row 1 (L7):', JSON.stringify(raw[0]));
-    console.log('DEBUG results raw row 2 (L30):', JSON.stringify(raw[1]));
-    console.log('DEBUG results raw row 3 (AllTime):', JSON.stringify(raw[2]));
-    console.log('DEBUG results fmt row 1 (L7):', JSON.stringify(fmt[0]));
-    console.log('DEBUG results fmt row 2 (L30):', JSON.stringify(fmt[1]));
-    console.log('DEBUG results fmt row 3 (AllTime):', JSON.stringify(fmt[2]));
+    // Filter to rows that have settled_bets > 0, keep in date order (newest first)
+    const active = rows.filter(r => r && r.length >= 6 && (parseFloat(r[3]) || 0) > 0);
 
-    const labels = ['l7', 'l30', 'allTime'];
-    const result = {};
-
-    labels.forEach((label, i) => {
-      const r = raw[i] || [];
-      const f = fmt[i] || [];
-      result[label] = {
-        label: r[0] ?? '',
-        outstanding_bets: r[1] ?? 0,
-        outstanding_wagered: r[2] ?? 0,
-        settled_bets: r[3] ?? 0,
-        settled_wagered: r[4] ?? 0,
-        pl: r[5] ?? 0,
-        roi: r[6] ?? 0,
-        wlv_string: r[7] ?? '0-0-0',
-        win_pct: r[8] ?? 0,
-        won: r[9] ?? 0,
-        lost: r[10] ?? 0,
-        void: r[11] ?? 0,
-        // Formatted strings exactly as they appear in the sheet
-        fmt: {
-          outstanding_bets: f[1] ?? '0',
-          outstanding_wagered: f[2] ?? '$0',
-          settled_bets: f[3] ?? '0',
-          settled_wagered: f[4] ?? '$0',
-          pl: f[5] ?? '$0',
-          roi: f[6] ?? '0%',
-          wlv_string: f[7] ?? '0-0-0',
-          win_pct: f[8] ?? '0%',
-        },
+    function summarize(subset) {
+      let settled_bets = 0, settled_wagered = 0, pl = 0, won = 0, lost = 0, voided = 0;
+      for (const r of subset) {
+        settled_bets += parseFloat(r[3]) || 0;
+        settled_wagered += parseFloat(r[4]) || 0;
+        pl += parseFloat(r[5]) || 0;
+        won += parseFloat(r[9]) || 0;
+        lost += parseFloat(r[10]) || 0;
+        voided += parseFloat(r[11]) || 0;
+      }
+      const roi = settled_wagered > 0 ? pl / settled_wagered : 0;
+      const total = won + lost + voided;
+      const win_pct = total > 0 ? won / total : 0;
+      return {
+        settled_bets: Math.round(settled_bets),
+        settled_wagered: Math.round(settled_wagered * 100) / 100,
+        pl: Math.round(pl * 100) / 100,
+        roi,
+        wlv_string: `${Math.round(won)}-${Math.round(lost)}-${Math.round(voided)}`,
+        win_pct,
+        won: Math.round(won),
+        lost: Math.round(lost),
+        void: Math.round(voided),
       };
-    });
+    }
 
-    res.status(200).json(result);
+    const l7 = summarize(active.slice(0, 7));
+    const l30 = summarize(active.slice(0, 30));
+    const allTime = summarize(active);
+
+    res.status(200).json({ l7, l30, allTime });
   } catch (err) {
     console.error('results error:', err);
     res.status(500).json({ error: err.message });
